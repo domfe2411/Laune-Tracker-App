@@ -15,14 +15,36 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Bereiche
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item" href="{{ url_for('mood_tracker') }}">LauneTracker</a></li>
-          </ul>
-        </li>
+        {% if session.user_id %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Bereiche
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+              <li><a class="dropdown-item" href="{{ url_for('mood_tracker') }}">LauneTracker</a></li>
+              {% if session.user_role == 'admin' %}
+                <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a></li>
+              {% endif %}
+            </ul>
+          </li>
+        {% endif %}
+      </ul>
+      <ul class="navbar-nav">
+        {% if session.user_id %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('change_password') }}">Passwort ändern</a>
+          </li>
+          <li class="nav-item">
+            <span class="navbar-text me-3">{{ session.user_email }}</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('logout') }}">Abmelden</a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('login') }}">Anmelden</a>
+          </li>
+        {% endif %}
       </ul>
     </div>
   </div>

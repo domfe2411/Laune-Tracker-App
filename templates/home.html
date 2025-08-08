@@ -1,9 +1,30 @@
 {% extends 'base.html' %}
 {% block title %}LauneTracker{% endblock %}
 {% block content %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
   <div class="py-5 text-center">
     <h1 class="display-4">LauneTracker</h1>
     <p class="lead mt-3">Willkommen zu deinem Persönlichen Laune Tracker</p>
+    
+    {% if session.user_id %}
+      <div class="mt-4">
+        <a href="{{ url_for('mood_tracker') }}" class="btn btn-primary btn-lg">Zum LauneTracker</a>
+      </div>
+    {% else %}
+      <div class="mt-4">
+        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Anmelden</a>
+      </div>
+    {% endif %}
   </div>
 {% endblock %}
 

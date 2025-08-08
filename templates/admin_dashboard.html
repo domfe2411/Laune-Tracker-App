@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard - LauneTracker{% endblock %}
+{% block content %}
+<style>
+  .admin-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .user-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    border-left: 4px solid #007bff;
+  }
+</style>
+
+<div class="container">
+  <div class="admin-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Admin Dashboard</h2>
+      <a href="{{ url_for('create_user') }}" class="btn btn-success">Neuen Benutzer erstellen</a>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <div class="row">
+      <div class="col-md-6">
+        <h4>Benutzerverwaltung</h4>
+        {% if users %}
+          {% for user in users %}
+          <div class="user-card">
+            <div class="row">
+              <div class="col-md-8">
+                <strong>{{ user.email }}</strong><br>
+                <small class="text-muted">Rolle: {{ user.role }}</small><br>
+                <small class="text-muted">Erstellt: {{ user.created_at[:10] }}</small>
+              </div>
+              <div class="col-md-4 text-end">
+                <a href="{{ url_for('delete_user', user_id=user._id) }}" 
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('Benutzer wirklich löschen?')">Löschen</a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted">Noch keine Teilnehmer vorhanden.</p>
+        {% endif %}
+      </div>
+      
+      <div class="col-md-6">
+        <h4>Admin-Informationen</h4>
+        <div class="card">
+          <div class="card-body">
+            <h6>Admin-Zugang:</h6>
+            <p><strong>E-Mail:</strong> admin@launetracker.com<br>
+            <strong>Passwort:</strong> admin123</p>
+            
+            <h6>E-Mail-Konfiguration:</h6>
+            <p>E-Mail-Versand ist optional. Benutzer können auch ohne E-Mail erstellt werden.</p>
+            
+            <h6>Funktionen:</h6>
+            <ul>
+              <li>Benutzer erstellen und E-Mail senden</li>
+              <li>Benutzer löschen</li>
+              <li>Teilnehmer können nur ihren eigenen LauneTracker nutzen</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
