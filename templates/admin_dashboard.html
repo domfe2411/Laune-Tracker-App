@@ -43,12 +43,14 @@
           {% for user in users %}
           <div class="user-card">
             <div class="row">
-              <div class="col-md-8">
+              <div class="col-md-6">
                 <strong>{{ user.email }}</strong><br>
                 <small class="text-muted">Rolle: {{ user.role }}</small><br>
                 <small class="text-muted">Erstellt: {{ user.created_at[:10] }}</small>
               </div>
-              <div class="col-md-4 text-end">
+              <div class="col-md-6 text-end">
+                <a href="{{ url_for('reset_user_password', user_id=user._id) }}" 
+                   class="btn btn-warning btn-sm">Passwort ändern</a>
                 <a href="{{ url_for('delete_user', user_id=user._id) }}" 
                    class="btn btn-danger btn-sm"
                    onclick="return confirm('Benutzer wirklich löschen?')">Löschen</a>
@@ -74,10 +76,14 @@
             
             <h6>Funktionen:</h6>
             <ul>
-              <li>Benutzer erstellen und E-Mail senden</li>
+              <li>Benutzer erstellen mit automatischem Passwort</li>
+              <li>Passwörter von Benutzern zurücksetzen</li>
               <li>Benutzer löschen</li>
               <li>Teilnehmer können nur ihren eigenen LauneTracker nutzen</li>
             </ul>
+            
+            <h6>Datenschutz:</h6>
+            <p>Admins können Passwörter ändern, aber nicht die aktuellen Passwörter einsehen.</p>
           </div>
         </div>
       </div>

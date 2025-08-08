@@ -158,42 +158,44 @@ def create_user():
             flash('E-Mail-Adresse bereits registriert', 'error')
             return render_template('create_user.html')
         
-        # Generiere temporäres Passwort
-        temp_password = secrets.token_urlsafe(8)
+        # Generiere automatisch ein Passwort
+        generated_password = secrets.token_urlsafe(8)
         
         # Erstelle Benutzer
         user_data = {
             "email": email,
-            "password": temp_password,
+            "password": generated_password,
             "role": role,
             "created_at": datetime.now().isoformat(),
             "active": True
         }
         user_collection.insert_one(user_data)
         
-        # Sende E-Mail mit Zugangsdaten
-        subject = "Zugang zum LauneTracker"
-        body = f"""
+        # Sende E-Mail mit Zugangsdaten (falls E-Mail konfiguriert)
+        if SMTP_USER != "your-email@gmail.com":
+            subject = "Zugang zum LauneTracker"
+            body = f"""
 Hallo!
 
 Du wurdest zum LauneTracker eingeladen.
 
 Deine Zugangsdaten:
 E-Mail: {email}
-Passwort: {temp_password}
+Passwort: {generated_password}
 
 Du kannst dich hier anmelden: {request.host_url}login
 
-Bitte ändere dein Passwort nach der ersten Anmeldung.
+Bitte ändere dein Passwort nach der ersten Anmeldung unter "Passwort ändern".
 
 Viele Grüße,
 Dein LauneTracker-Team
 """
-        
-        if send_email(email, subject, body):
-            flash(f'Benutzer {email} erstellt und E-Mail gesendet', 'success')
+            if send_email(email, subject, body):
+                flash(f'Benutzer {email} erstellt und E-Mail gesendet', 'success')
+            else:
+                flash(f'Benutzer {email} erstellt, aber E-Mail konnte nicht gesendet werden. Passwort: {generated_password}', 'warning')
         else:
-            flash(f'Benutzer {email} erstellt, aber E-Mail konnte nicht gesendet werden', 'warning')
+            flash(f'Benutzer {email} erstellt mit Passwort: {generated_password}', 'success')
         
         return redirect(url_for('admin_dashboard'))
     
@@ -205,6 +207,26 @@ def delete_user(user_id):
     user_collection.delete_one({"_id": ObjectId(user_id)})
     flash('Benutzer gelöscht', 'success')
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reset-password/<user_id>', methods=['GET', 'POST'])
+@admin_required
+def reset_user_password(user_id):
+    user = user_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        flash('Benutzer nicht gefunden', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    if request.method == 'POST':
+        new_password = request.form['new_password']
+        if len(new_password) < 6:
+            flash('Passwort muss mindestens 6 Zeichen lang sein', 'error')
+            return render_template('reset_password.html', user=user)
+        
+        user_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"password": new_password}})
+        flash(f'Passwort für {user["email"]} wurde geändert', 'success')
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('reset_password.html', user=user)
 
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required
