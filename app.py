@@ -33,7 +33,12 @@ db = client["inventory"]
 collection = db["items"]
 
 @app.route('/')
-def index():
+def home():
+    return render_template('home.html')
+
+
+@app.route('/inventory')
+def inventory():
     items = collection.find()
     return render_template('index.html', items=list(items))
 
@@ -49,7 +54,7 @@ def add_item():
             'price': price
         }
         collection.insert_one(item)
-    return redirect(url_for('index'))
+    return redirect(url_for('inventory'))
 
 @app.route('/update_item/<item_id>', methods=['GET', 'POST'])
 def update_item(item_id):
@@ -61,13 +66,13 @@ def update_item(item_id):
             {'_id': ObjectId(item_id)},
             {'$set': {'quantity': new_quantity, 'price': new_price}}
         )
-        return redirect(url_for('index'))
+        return redirect(url_for('inventory'))
     return render_template('update_item.html', item=item)
 
 @app.route('/delete_item/<item_id>')
 def delete_item(item_id):
     collection.delete_one({'_id': ObjectId(item_id)})
-    return redirect(url_for('index'))
+    return redirect(url_for('inventory'))
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "5000"))
