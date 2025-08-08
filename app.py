@@ -1,9 +1,31 @@
 from flask import Flask, render_template, request, redirect, url_for
 from pymongo import MongoClient
 from bson import ObjectId
+import os
 
 app = Flask(__name__)
-client = MongoClient("mongodb://localhost:27017/")  # Passe ggf. die MongoDB-URL an
+
+
+def create_mongo_client() -> MongoClient:
+    """Create a MongoDB client; fall back to in-memory mongomock if real DB is unavailable."""
+    mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
+    try:
+        client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=500)
+        # Ensure connection works; will raise if server not reachable
+        client.admin.command("ping")
+        return client
+    except Exception:
+        try:
+            import mongomock  # type: ignore
+        except Exception as exc:
+            raise RuntimeError(
+                "MongoDB ist nicht verfügbar und 'mongomock' ist nicht installiert. "
+                "Installiere mongomock (pip install mongomock) oder setze MONGODB_URI."
+            ) from exc
+        return mongomock.MongoClient()
+
+
+client = create_mongo_client()
 
 # Datenbank und Collection
 # (Wird automatisch angelegt, falls nicht vorhanden)
@@ -48,4 +70,5 @@ def delete_item(item_id):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)

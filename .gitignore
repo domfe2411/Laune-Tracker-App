@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env
+.venv/
+
+# Logs
+*.log
+server.log
+
+# OS/Editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Byte-compiled / compiled / cache
+*.egg-info/
+
+# Coverage/test
+.coverage
+.pytest_cache/
+
+# Local settings
+.env.local
