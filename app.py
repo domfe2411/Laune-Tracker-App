@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+from datetime import datetime, date, timedelta
+import json
 
 app = Flask(__name__)
 
@@ -27,52 +29,92 @@ def create_mongo_client() -> MongoClient:
 
 client = create_mongo_client()
 
-# Datenbank und Collection
-# (Wird automatisch angelegt, falls nicht vorhanden)
-db = client["inventory"]
-collection = db["items"]
+# Datenbank und Collection für LauneTracker
+db = client["launetracker"]
+mood_collection = db["moods"]
 
 @app.route('/')
 def home():
     return render_template('home.html')
 
 
-@app.route('/inventory')
-def inventory():
-    items = collection.find()
-    return render_template('index.html', items=list(items))
-
-@app.route('/add_item', methods=['POST'])
-def add_item():
-    if request.method == 'POST':
-        item_name = request.form['item_name']
-        quantity = int(request.form['quantity'])
-        price = float(request.form['price'])
-        item = {
-            'item_name': item_name,
-            'quantity': quantity,
-            'price': price
+@app.route('/mood-tracker')
+def mood_tracker():
+    # Hole alle Stimmungseinträge des aktuellen Monats
+    current_month = date.today().replace(day=1)
+    next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    
+    moods = list(mood_collection.find({
+        'date': {
+            '$gte': current_month.isoformat(),
+            '$lt': next_month.isoformat()
         }
-        collection.insert_one(item)
-    return redirect(url_for('inventory'))
+    }).sort('date', 1))
+    
+    return render_template('mood_tracker.html', moods=moods)
 
-@app.route('/update_item/<item_id>', methods=['GET', 'POST'])
-def update_item(item_id):
-    item = collection.find_one({'_id': ObjectId(item_id)})
+@app.route('/add_mood', methods=['POST'])
+def add_mood():
     if request.method == 'POST':
-        new_quantity = int(request.form['new_quantity'])
-        new_price = float(request.form['new_price'])
-        collection.update_one(
-            {'_id': ObjectId(item_id)},
-            {'$set': {'quantity': new_quantity, 'price': new_price}}
-        )
-        return redirect(url_for('inventory'))
-    return render_template('update_item.html', item=item)
+        motivation = int(request.form['motivation'])
+        mood = int(request.form['mood'])
+        wellbeing = int(request.form['wellbeing'])
+        note = request.form.get('note', '')
+        
+        mood_entry = {
+            'date': date.today().isoformat(),
+            'motivation': motivation,
+            'mood': mood,
+            'wellbeing': wellbeing,
+            'note': note,
+            'created_at': datetime.now().isoformat()
+        }
+        mood_collection.insert_one(mood_entry)
+    return redirect(url_for('mood_tracker'))
 
-@app.route('/delete_item/<item_id>')
-def delete_item(item_id):
-    collection.delete_one({'_id': ObjectId(item_id)})
-    return redirect(url_for('inventory'))
+@app.route('/delete_mood/<mood_id>')
+def delete_mood(mood_id):
+    mood_collection.delete_one({'_id': ObjectId(mood_id)})
+    return redirect(url_for('mood_tracker'))
+
+@app.route('/api/mood-data')
+def get_mood_data():
+    """API endpoint für Chart.js Daten"""
+    current_month = date.today().replace(day=1)
+    next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
+    
+    moods = list(mood_collection.find({
+        'date': {
+            '$gte': current_month.isoformat(),
+            '$lt': next_month.isoformat()
+        }
+    }).sort('date', 1))
+    
+    # Berechne Durchschnittswerte pro Tag
+    daily_data = {}
+    for mood in moods:
+        day = mood['date']
+        if day not in daily_data:
+            daily_data[day] = {'motivation': [], 'mood': [], 'wellbeing': []}
+        daily_data[day]['motivation'].append(mood['motivation'])
+        daily_data[day]['mood'].append(mood['mood'])
+        daily_data[day]['wellbeing'].append(mood['wellbeing'])
+    
+    # Berechne Durchschnitte
+    chart_data = {
+        'labels': [],
+        'motivation': [],
+        'mood': [],
+        'wellbeing': []
+    }
+    
+    for day in sorted(daily_data.keys()):
+        chart_data['labels'].append(day)
+        chart_data['motivation'].append(sum(daily_data[day]['motivation']) / len(daily_data[day]['motivation']))
+        chart_data['mood'].append(sum(daily_data[day]['mood']) / len(daily_data[day]['mood']))
+        chart_data['wellbeing'].append(sum(daily_data[day]['wellbeing']) / len(daily_data[day]['wellbeing']))
+    
+    return jsonify(chart_data)
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "5000"))

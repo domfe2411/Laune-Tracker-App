@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block title %}LauneTracker - Stimmung verfolgen{% endblock %}
+{% block content %}
+<style>
+  .rating-container {
+    margin: 20px 0;
+    text-align: center;
+  }
+  .rating-slider {
+    width: 100%;
+    max-width: 400px;
+    margin: 10px auto;
+  }
+  .rating-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 5px 0;
+  }
+  .rating-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  .mood-entry {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    border-left: 4px solid #007bff;
+  }
+  .chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .form-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .positive { color: #28a745; }
+  .negative { color: #dc3545; }
+  .neutral { color: #6c757d; }
+</style>
+
+<div class="container">
+  <h1 class="text-center mb-4">LauneTracker</h1>
+  
+  <!-- Eingabeformular -->
+  <div class="form-container">
+    <h3>Heute bewerten</h3>
+    <form action="{{ url_for('add_mood') }}" method="post">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="rating-container">
+            <div class="rating-label">Motivation</div>
+            <input type="range" name="motivation" class="rating-slider" min="-5" max="5" value="0" 
+                   oninput="updateValue(this, 'motivation-value')">
+            <div id="motivation-value" class="rating-value">0</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="rating-container">
+            <div class="rating-label">Stimmung</div>
+            <input type="range" name="mood" class="rating-slider" min="-5" max="5" value="0" 
+                   oninput="updateValue(this, 'mood-value')">
+            <div id="mood-value" class="rating-value">0</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="rating-container">
+            <div class="rating-label">Wohlbefinden</div>
+            <input type="range" name="wellbeing" class="rating-slider" min="-5" max="5" value="0" 
+                   oninput="updateValue(this, 'wellbeing-value')">
+            <div id="wellbeing-value" class="rating-value">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="note" class="form-label">Notiz (optional):</label>
+        <textarea name="note" class="form-control" rows="2" placeholder="Wie war dein Tag?"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Eintrag speichern</button>
+    </form>
+  </div>
+
+  <!-- Grafische Darstellung -->
+  <div class="chart-container">
+    <h3>Übersicht über den Monat</h3>
+    <canvas id="moodChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- Liste der Einträge -->
+  <div class="mt-4">
+    <h3>Deine Einträge</h3>
+    {% if moods %}
+      {% for mood in moods %}
+      <div class="mood-entry">
+        <div class="row">
+          <div class="col-md-2">
+            <strong>{{ mood.date }}</strong>
+          </div>
+          <div class="col-md-2">
+            <span class="{% if mood.motivation > 0 %}positive{% elif mood.motivation < 0 %}negative{% else %}neutral{% endif %}">
+              Motivation: {{ mood.motivation }}
+            </span>
+          </div>
+          <div class="col-md-2">
+            <span class="{% if mood.mood > 0 %}positive{% elif mood.mood < 0 %}negative{% else %}neutral{% endif %}">
+              Stimmung: {{ mood.mood }}
+            </span>
+          </div>
+          <div class="col-md-2">
+            <span class="{% if mood.wellbeing > 0 %}positive{% elif mood.wellbeing < 0 %}negative{% else %}neutral{% endif %}">
+              Wohlbefinden: {{ mood.wellbeing }}
+            </span>
+          </div>
+          <div class="col-md-3">
+            {% if mood.note %}
+              <small class="text-muted">{{ mood.note }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-1">
+            <a href="{{ url_for('delete_mood', mood_id=mood._id) }}" 
+               class="btn btn-danger btn-sm" 
+               onclick="return confirm('Eintrag wirklich löschen?')">Löschen</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-center text-muted">Noch keine Einträge vorhanden.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function updateValue(slider, elementId) {
+  const value = slider.value;
+  const element = document.getElementById(elementId);
+  element.textContent = value;
+  
+  // Farbe basierend auf Wert
+  if (value > 0) {
+    element.className = 'rating-value positive';
+  } else if (value < 0) {
+    element.className = 'rating-value negative';
+  } else {
+    element.className = 'rating-value neutral';
+  }
+}
+
+// Chart.js für grafische Darstellung
+async function loadChartData() {
+  try {
+    const response = await fetch('/api/mood-data');
+    const data = await response.json();
+    
+    const ctx = document.getElementById('moodChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: 'Motivation',
+            data: data.motivation,
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            tension: 0.1
+          },
+          {
+            label: 'Stimmung',
+            data: data.mood,
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.1
+          },
+          {
+            label: 'Wohlbefinden',
+            data: data.wellbeing,
+            borderColor: '#ffc107',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+            tension: 0.1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            min: -5,
+            max: 5,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top'
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Fehler beim Laden der Chart-Daten:', error);
+  }
+}
+
+// Chart laden wenn Seite geladen ist
+document.addEventListener('DOMContentLoaded', loadChartData);
+</script>
+{% endblock %}
