@@ -44,17 +44,38 @@
   .positive { color: #28a745; }
   .negative { color: #dc3545; }
   .neutral { color: #6c757d; }
+  .view-toggle {
+    margin: 20px 0;
+    text-align: center;
+  }
+  .view-toggle .btn {
+    margin: 0 5px;
+  }
 </style>
 
 <div class="container">
   <h1 class="text-center mb-4">LauneTracker</h1>
   
+  <!-- Ansicht Toggle -->
+  <div class="view-toggle">
+    <a href="{{ url_for('mood_tracker') }}" class="btn btn-{% if view_type == 'monthly' %}primary{% else %}outline-primary{% endif %}">Monatlich</a>
+    <a href="{{ url_for('mood_tracker_weekly') }}" class="btn btn-{% if view_type == 'weekly' %}primary{% else %}outline-primary{% endif %}">Wöchentlich</a>
+  </div>
+  
   <!-- Eingabeformular -->
   <div class="form-container">
-    <h3>Heute bewerten</h3>
+    <h3>Stimmung eintragen</h3>
     <form action="{{ url_for('add_mood') }}" method="post">
       <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <div class="mb-3">
+            <label for="selected_date" class="form-label">Datum:</label>
+            <input type="date" name="selected_date" id="selected_date" class="form-control" 
+                   value="{{ today }}" max="{{ today }}">
+            <small class="text-muted">Wähle ein Datum für nachträgliche Einträge</small>
+          </div>
+        </div>
+        <div class="col-md-3">
           <div class="rating-container">
             <div class="rating-label">Motivation</div>
             <input type="range" name="motivation" class="rating-slider" min="-5" max="5" value="0" 
@@ -62,7 +83,7 @@
             <div id="motivation-value" class="rating-value">0</div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="rating-container">
             <div class="rating-label">Stimmung</div>
             <input type="range" name="mood" class="rating-slider" min="-5" max="5" value="0" 
@@ -70,7 +91,7 @@
             <div id="mood-value" class="rating-value">0</div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="rating-container">
             <div class="rating-label">Wohlbefinden</div>
             <input type="range" name="wellbeing" class="rating-slider" min="-5" max="5" value="0" 
@@ -89,7 +110,7 @@
 
   <!-- Grafische Darstellung -->
   <div class="chart-container">
-    <h3>Übersicht über den Monat</h3>
+    <h3>Übersicht {% if view_type == 'weekly' %}über die Woche{% else %}über den Monat{% endif %}</h3>
     <canvas id="moodChart" width="400" height="200"></canvas>
   </div>
 
@@ -118,12 +139,12 @@
               Wohlbefinden: {{ mood.wellbeing }}
             </span>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             {% if mood.note %}
               <small class="text-muted">{{ mood.note }}</small>
             {% endif %}
           </div>
-          <div class="col-md-1">
+          <div class="col-md-2">
             <a href="{{ url_for('delete_mood', mood_id=mood._id) }}" 
                class="btn btn-danger btn-sm" 
                onclick="return confirm('Eintrag wirklich löschen?')">Löschen</a>
@@ -157,7 +178,10 @@ function updateValue(slider, elementId) {
 // Chart.js für grafische Darstellung
 async function loadChartData() {
   try {
-    const response = await fetch('/api/mood-data');
+    const viewType = '{{ view_type }}';
+    const apiUrl = viewType === 'weekly' ? '/api/mood-data/weekly' : '/api/mood-data';
+    
+    const response = await fetch(apiUrl);
     const data = await response.json();
     
     const ctx = document.getElementById('moodChart').getContext('2d');
@@ -216,3 +240,4 @@ async function loadChartData() {
 document.addEventListener('DOMContentLoaded', loadChartData);
 </script>
 {% endblock %}
+

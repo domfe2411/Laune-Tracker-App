@@ -51,7 +51,23 @@ def mood_tracker():
         }
     }).sort('date', 1))
     
-    return render_template('mood_tracker.html', moods=moods)
+    return render_template('mood_tracker.html', moods=moods, view_type='monthly', today=date.today().isoformat())
+
+@app.route('/mood-tracker/weekly')
+def mood_tracker_weekly():
+    # Hole alle Stimmungseinträge der aktuellen Woche
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=7)
+    
+    moods = list(mood_collection.find({
+        'date': {
+            '$gte': start_of_week.isoformat(),
+            '$lt': end_of_week.isoformat()
+        }
+    }).sort('date', 1))
+    
+    return render_template('mood_tracker.html', moods=moods, view_type='weekly', today=date.today().isoformat())
 
 @app.route('/add_mood', methods=['POST'])
 def add_mood():
@@ -61,8 +77,11 @@ def add_mood():
         wellbeing = int(request.form['wellbeing'])
         note = request.form.get('note', '')
         
+        # Verwende ausgewähltes Datum oder heute
+        selected_date = request.form.get('selected_date', date.today().isoformat())
+        
         mood_entry = {
-            'date': date.today().isoformat(),
+            'date': selected_date,
             'motivation': motivation,
             'mood': mood,
             'wellbeing': wellbeing,
@@ -79,7 +98,7 @@ def delete_mood(mood_id):
 
 @app.route('/api/mood-data')
 def get_mood_data():
-    """API endpoint für Chart.js Daten"""
+    """API endpoint für Chart.js Daten - Monatlich"""
     current_month = date.today().replace(day=1)
     next_month = (current_month.replace(day=28) + timedelta(days=4)).replace(day=1)
     
@@ -90,6 +109,26 @@ def get_mood_data():
         }
     }).sort('date', 1))
     
+    return _process_mood_data(moods)
+
+@app.route('/api/mood-data/weekly')
+def get_mood_data_weekly():
+    """API endpoint für Chart.js Daten - Wöchentlich"""
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=7)
+    
+    moods = list(mood_collection.find({
+        'date': {
+            '$gte': start_of_week.isoformat(),
+            '$lt': end_of_week.isoformat()
+        }
+    }).sort('date', 1))
+    
+    return _process_mood_data(moods)
+
+def _process_mood_data(moods):
+    """Verarbeite Stimmungsdaten für Chart.js"""
     # Berechne Durchschnittswerte pro Tag
     daily_data = {}
     for mood in moods:
