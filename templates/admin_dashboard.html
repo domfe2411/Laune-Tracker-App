@@ -37,51 +37,47 @@
     {% endwith %}
     
     <div class="row">
-      <div class="col-md-6">
+      <div class="col-md-7">
         <h4>Benutzerverwaltung</h4>
         {% if users %}
           {% for user in users %}
           <div class="user-card">
-            <div class="row">
-              <div class="col-md-6">
+            <form class="row align-items-center" method="POST" action="{{ url_for('update_user_role', user_id=user._id) }}">
+              <div class="col-md-5">
                 <strong>{{ user.email }}</strong><br>
-                <small class="text-muted">Rolle: {{ user.role }}</small><br>
                 <small class="text-muted">Erstellt: {{ user.created_at[:10] }}</small>
               </div>
-              <div class="col-md-6 text-end">
-                <a href="{{ url_for('reset_user_password', user_id=user._id) }}" 
-                   class="btn btn-warning btn-sm">Passwort ändern</a>
-                <a href="{{ url_for('delete_user', user_id=user._id) }}" 
-                   class="btn btn-danger btn-sm"
-                   onclick="return confirm('Benutzer wirklich löschen?')">Löschen</a>
+              <div class="col-md-3">
+                <select class="form-select form-select-sm" name="role">
+                  <option value="teilnehmer" {% if user.role == 'teilnehmer' %}selected{% endif %}>Teilnehmer</option>
+                  <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                </select>
               </div>
-            </div>
+              <div class="col-md-4 text-end">
+                <button type="submit" class="btn btn-primary btn-sm me-2">Rolle speichern</button>
+                <a href="{{ url_for('reset_user_password', user_id=user._id) }}" class="btn btn-warning btn-sm me-2">Passwort ändern</a>
+                <a href="{{ url_for('delete_user', user_id=user._id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Benutzer wirklich löschen?')">Löschen</a>
+              </div>
+            </form>
           </div>
           {% endfor %}
         {% else %}
-          <p class="text-muted">Noch keine Teilnehmer vorhanden.</p>
+          <p class="text-muted">Noch keine Benutzer vorhanden.</p>
         {% endif %}
       </div>
       
-      <div class="col-md-6">
+      <div class="col-md-5">
         <h4>Admin-Informationen</h4>
         <div class="card">
           <div class="card-body">
-            <h6>Admin-Zugang:</h6>
-            <p><strong>E-Mail:</strong> admin@launetracker.com<br>
-            <strong>Passwort:</strong> admin123</p>
-            
-            <h6>E-Mail-Konfiguration:</h6>
-            <p>E-Mail-Versand ist optional. Benutzer können auch ohne E-Mail erstellt werden.</p>
-            
             <h6>Funktionen:</h6>
             <ul>
               <li>Benutzer erstellen mit automatischem Passwort</li>
+              <li>Rollen vergeben (Admin/Teilnehmer)</li>
               <li>Passwörter von Benutzern zurücksetzen</li>
               <li>Benutzer löschen</li>
               <li>Teilnehmer können nur ihren eigenen LauneTracker nutzen</li>
             </ul>
-            
             <h6>Datenschutz:</h6>
             <p>Admins können Passwörter ändern, aber nicht die aktuellen Passwörter einsehen.</p>
           </div>
